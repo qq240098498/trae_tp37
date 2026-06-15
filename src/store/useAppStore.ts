@@ -122,11 +122,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteCertificate: (id) => {
-    const certificates = get().certificates.filter((c) => c.id !== id);
-    setCertificates(certificates);
-    const reminders = computeReminders(certificates);
-    setReminders(reminders);
-    set({ certificates, reminders });
+    try {
+      const current = get().certificates;
+      const exists = current.some((c) => c.id === id);
+      if (!exists) return;
+      const certificates = current.filter((c) => c.id !== id);
+      setCertificates(certificates);
+      const reminders = computeReminders(certificates);
+      setReminders(reminders);
+      set({ certificates, reminders });
+    } catch (err) {
+      console.error('删除证件失败:', err);
+    }
   },
 
   getCertificate: (id) => get().certificates.find((c) => c.id === id),
@@ -163,9 +170,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (a.isPermanent && b.isPermanent) cmp = 0;
         else if (a.isPermanent) cmp = 1;
         else if (b.isPermanent) cmp = -1;
-        else cmp = a.expiryDate.localeCompare(b.expiryDate);
+        else cmp = (a.expiryDate || '').localeCompare(b.expiryDate || '');
       } else if (sortBy === 'created') {
-        cmp = a.createdAt.localeCompare(b.createdAt);
+        cmp = (a.createdAt || '').localeCompare(b.createdAt || '');
       }
       return sortOrder === 'asc' ? cmp : -cmp;
     });
@@ -284,18 +291,23 @@ function computeReminders(certificates: Certificate[]): Reminder[] {
   const today = todayISO();
 
   for (const cert of certificates) {
-    if (cert.isPermanent) continue;
-    const days = calculateDaysRemaining(cert.expiryDate);
-    const level = getReminderLevel(days);
-    if (level) {
-      reminders.push({
-        id: `reminder-${cert.id}-${level}`,
-        certificateId: cert.id,
-        level: level as ReminderLevel,
-        isRead: false,
-        isDismissed: false,
-        triggerDate: today,
-      });
+    try {
+      if (cert.isPermanent) continue;
+      if (!cert.expiryDate) continue;
+      const days = calculateDaysRemaining(cert.expiryDate);
+      const level = getReminderLevel(days);
+      if (level) {
+        reminders.push({
+          id: `reminder-${cert.id}-${level}`,
+          certificateId: cert.id,
+          level: level as ReminderLevel,
+          isRead: false,
+          isDismissed: false,
+          triggerDate: today,
+        });
+      }
+    } catch (err) {
+      console.error('计算提醒失败:', cert.id, err);
     }
   }
   return reminders;

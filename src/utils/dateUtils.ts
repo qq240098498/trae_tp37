@@ -18,12 +18,19 @@ export function formatDateShort(date: string | Date): string {
 }
 
 export function calculateDaysRemaining(expiryDate: string): number {
-  const today = startOfToday();
-  const expiry = parseISO(expiryDate);
-  return differenceInDays(expiry, today);
+  try {
+    if (!expiryDate) return 0;
+    const today = startOfToday();
+    const expiry = parseISO(expiryDate);
+    if (isNaN(expiry.getTime())) return 0;
+    return differenceInDays(expiry, today);
+  } catch {
+    return 0;
+  }
 }
 
 export function getReminderLevel(days: number): ReminderLevel | null {
+  if (days < 0) return 7;
   for (const level of REMINDER_LEVELS) {
     if (days <= level) {
       return level;

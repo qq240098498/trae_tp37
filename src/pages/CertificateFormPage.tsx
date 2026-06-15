@@ -177,7 +177,7 @@ export function CertificateFormPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
             <h2 className="font-bold text-gray-900 dark:text-white">基本信息</h2>
           </div>
@@ -312,7 +312,7 @@ export function CertificateFormPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h2 className="font-bold text-gray-900 dark:text-white">有效期信息</h2>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -356,7 +356,7 @@ export function CertificateFormPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
             <h2 className="font-bold text-gray-900 dark:text-white">备注信息</h2>
           </div>
@@ -371,7 +371,7 @@ export function CertificateFormPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
             <h2 className="font-bold text-gray-900 dark:text-white">证件照片 / 扫描件</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">

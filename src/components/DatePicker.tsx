@@ -75,8 +75,8 @@ export function DatePicker({ value, onChange, label, min, max }: DatePickerProps
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute z-50 mt-2 p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl w-[320px]">
+          <div className="fixed inset-0 z-[90]" onClick={() => setIsOpen(false)} />
+          <div className="absolute z-[100] mt-2 p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl w-[320px]">
             <div className="flex items-center justify-between mb-4">
               <button
                 type="button"

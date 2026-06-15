@@ -24,14 +24,14 @@ export function CertificateCard({
   onDelete,
   compact = false,
 }: CertificateCardProps) {
-  const days = certificate.isPermanent ? Infinity : calculateDaysRemaining(certificate.expiryDate);
+  const days = certificate.isPermanent ? Infinity : calculateDaysRemaining(certificate.expiryDate || '');
   const level = certificate.isPermanent ? null : getReminderLevel(days);
   const isUrgent = !certificate.isPermanent && days <= 30 && days > 0;
   const isExpired = !certificate.isPermanent && days < 0;
 
   const bgClass = getReminderBgClass(level, days);
   const textClass = getReminderTextClass(level, days);
-  const emoji = CERTIFICATE_TYPE_EMOJI[certificate.type];
+  const emoji = CERTIFICATE_TYPE_EMOJI[certificate.type] || '📄';
 
   return (
     <div
