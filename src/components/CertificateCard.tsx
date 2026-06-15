@@ -8,7 +8,7 @@ import {
   getReminderTextClass,
   maskCertificateNumber,
 } from '@/utils/dateUtils';
-import { Eye, Edit2, Trash2 } from 'lucide-react';
+import { Eye, Edit2, Trash2, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface CertificateCardProps {
@@ -95,6 +95,17 @@ export function CertificateCard({
               <span className="text-gray-800 dark:text-gray-200 truncate max-w-[180px] text-right">
                 {certificate.issuer || '-'}
               </span>
+            </div>
+          )}
+          {!compact && !certificate.isPermanent && (days <= 90 || days < 0) && (
+            <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+              <Link
+                to={`/certificates/${certificate.id}`}
+                className="flex items-center gap-1.5 text-xs text-cyan-600 dark:text-cyan-400 hover:underline"
+              >
+                <RefreshCw className="w-3 h-3" />
+                查看换证指南
+              </Link>
             </div>
           )}
         </div>

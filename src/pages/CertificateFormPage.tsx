@@ -14,6 +14,7 @@ import {
   RELATION_TYPES,
   RelationType,
 } from '@/types';
+import { LOCATION_OPTIONS } from '@/utils/renewalGuide';
 
 interface FormState {
   type: CertificateType;
@@ -24,6 +25,7 @@ interface FormState {
   issueDate: string;
   expiryDate: string;
   isPermanent: boolean;
+  location: string;
   notes: string;
   photos: CertificatePhoto[];
   newMemberName: string;
@@ -57,6 +59,7 @@ export function CertificateFormPage() {
     issueDate: editingCert?.issueDate || '',
     expiryDate: editingCert?.expiryDate || '',
     isPermanent: editingCert?.isPermanent || false,
+    location: editingCert?.location || '',
     notes: editingCert?.notes || '',
     photos: editingCert?.photos || [],
     newMemberName: '',
@@ -140,6 +143,7 @@ export function CertificateFormPage() {
       issueDate: form.issueDate,
       expiryDate: form.expiryDate,
       isPermanent: form.isPermanent,
+      location: form.location || undefined,
       notes: form.notes.trim() || undefined,
       photos: form.photos,
     };
@@ -308,6 +312,22 @@ export function CertificateFormPage() {
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
               />
               {errors.issuer && <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors.issuer}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                所在地 <span className="text-gray-400 text-xs">（选填，用于换证指南推荐）</span>
+              </label>
+              <select
+                value={form.location}
+                onChange={(e) => updateField('location', e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+              >
+                <option value="">请选择所在地</option>
+                {LOCATION_OPTIONS.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

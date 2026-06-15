@@ -40,6 +40,8 @@ export interface Certificate {
   issueDate: string;
   expiryDate: string;
   isPermanent: boolean;
+  location?: string;
+  renewalCompletedDate?: string;
   notes?: string;
   photos: CertificatePhoto[];
   createdAt: string;

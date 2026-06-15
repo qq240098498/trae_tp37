@@ -11,9 +11,16 @@ import {
   FileText,
   Image as ImageIcon,
   Clock,
+  MapPin,
+  RefreshCw,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  FileCheck,
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { PhotoViewer } from '@/components/PhotoViewer';
+import { DatePicker } from '@/components/DatePicker';
 import {
   CERTIFICATE_TYPE_EMOJI,
 } from '@/types';
@@ -26,14 +33,23 @@ import {
   getReminderTextClass,
 } from '@/utils/dateUtils';
 import { formatFileSize } from '@/utils/imageUtils';
+import {
+  getRenewalGuides,
+  getRenewalGuideByLocation,
+  getValidityYears,
+  RenewalGuide,
+} from '@/utils/renewalGuide';
 
 export function CertificateDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getCertificate, deleteCertificate } = useAppStore();
+  const { getCertificate, deleteCertificate, completeRenewal } = useAppStore();
   const cert = id ? getCertificate(id) : undefined;
 
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [showRenewalGuide, setShowRenewalGuide] = useState(false);
+  const [showRenewalForm, setShowRenewalForm] = useState(false);
+  const [renewalDate, setRenewalDate] = useState('');
 
   if (!cert) {
     return (
@@ -55,12 +71,22 @@ export function CertificateDetailPage() {
 
   const days = cert.isPermanent ? Infinity : calculateDaysRemaining(cert.expiryDate);
   const level = cert.isPermanent ? null : getReminderLevel(days);
+  const renewalGuides = getRenewalGuides(cert.type);
+  const matchedGuide = getRenewalGuideByLocation(cert.type, cert.location);
+  const validityYears = getValidityYears(cert.type);
 
   const handleDelete = () => {
     if (confirm('确定要删除该证件吗？此操作无法撤销。')) {
       deleteCertificate(cert.id);
       navigate('/certificates');
     }
+  };
+
+  const handleRenewalComplete = () => {
+    if (!renewalDate || !id) return;
+    completeRenewal(id, renewalDate);
+    setShowRenewalForm(false);
+    setRenewalDate('');
   };
 
   return (
@@ -171,6 +197,7 @@ export function CertificateDetailPage() {
           <div className="p-5 space-y-4">
             <InfoRow icon={<Hash className="w-4 h-4" />} label="证件号码" value={cert.number} mono />
             <InfoRow icon={<Building2 className="w-4 h-4" />} label="发证机关" value={cert.issuer || '-'} />
+            <InfoRow icon={<MapPin className="w-4 h-4" />} label="所在地" value={cert.location || '未填写'} />
           </div>
         </div>
 
@@ -185,6 +212,13 @@ export function CertificateDetailPage() {
               label="有效期至"
               value={cert.isPermanent ? '长期有效' : formatDate(cert.expiryDate)}
             />
+            {cert.renewalCompletedDate && (
+              <InfoRow
+                icon={<CheckCircle2 className="w-4 h-4" />}
+                label="换证完成日期"
+                value={formatDate(cert.renewalCompletedDate)}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -199,6 +233,167 @@ export function CertificateDetailPage() {
               {cert.notes}
             </p>
           </div>
+        </div>
+      )}
+
+      {!cert.isPermanent && (
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowRenewalGuide(!showRenewalGuide)}
+            className="w-full px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+          >
+            <h2 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-cyan-500" />
+              换证指南
+              <span className="font-normal text-gray-400 text-xs">（{cert.type}到期换领流程）</span>
+            </h2>
+            {showRenewalGuide ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </button>
+
+          {showRenewalGuide && (
+            <div className="p-5 space-y-5">
+              {renewalGuides.map((guide, idx) => (
+                <div
+                  key={idx}
+                  className={`
+                    rounded-xl p-4 border transition-colors
+                    ${matchedGuide?.steps === guide.steps
+                      ? 'border-cyan-300 bg-cyan-50/50 dark:border-cyan-500/30 dark:bg-cyan-500/5'
+                      : 'border-gray-200 dark:border-gray-600'
+                    }
+                  `}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300">
+                      {guide.location}
+                    </span>
+                    {matchedGuide?.steps === guide.steps && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300">
+                        匹配当前所在地
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">换证流程</p>
+                      <p className="text-sm text-gray-900 dark:text-white font-medium">{guide.steps}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">工本费</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{guide.fee}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">办理时限</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{guide.duration}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">有效期</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{guide.validityYears}年</p>
+                      </div>
+                    </div>
+
+                    {guide.materials.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">所需材料</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {guide.materials.map((mat, mIdx) => (
+                            <span
+                              key={mIdx}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20"
+                            >
+                              <FileCheck className="w-3 h-3" />
+                              {mat}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {guide.tips.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">温馨提示</p>
+                        <ul className="space-y-1">
+                          {guide.tips.map((tip, tIdx) => (
+                            <li key={tIdx} className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                              <span className="text-cyan-500 mt-0.5 flex-shrink-0">•</span>
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+                {cert.renewalCompletedDate ? (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300">已记录换证完成</p>
+                      <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                        换证完成日期：{formatDate(cert.renewalCompletedDate)}，
+                        新有效期至：{formatDate(cert.expiryDate)}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {!showRenewalForm ? (
+                      <button
+                        onClick={() => setShowRenewalForm(true)}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/20 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        记录换证完成
+                      </button>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-500/5 border border-cyan-200 dark:border-cyan-500/20 space-y-3">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">记录换证完成日期</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          系统将根据证件类型自动计算新的有效期（{cert.type}有效期{validityYears}年）
+                        </p>
+                        <DatePicker
+                          label="换证完成日期"
+                          value={renewalDate}
+                          onChange={setRenewalDate}
+                          max={new Date().toISOString().split('T')[0]}
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleRenewalComplete}
+                            disabled={!renewalDate}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium bg-cyan-500 text-white hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            确认完成
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowRenewalForm(false);
+                              setRenewalDate('');
+                            }}
+                            className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

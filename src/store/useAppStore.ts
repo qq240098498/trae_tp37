@@ -25,7 +25,9 @@ import {
   generateId,
   getReminderLevel,
   todayISO,
+  addDaysISO,
 } from '@/utils/dateUtils';
+import { getValidityYears } from '@/utils/renewalGuide';
 
 interface AppState {
   certificates: Certificate[];
@@ -41,6 +43,7 @@ interface AppState {
   addCertificate: (cert: Omit<Certificate, 'id' | 'createdAt' | 'updatedAt' | 'photos'> & { photos?: Certificate['photos'] }) => void;
   updateCertificate: (id: string, cert: Partial<Certificate>) => void;
   deleteCertificate: (id: string) => void;
+  completeRenewal: (id: string, completionDate: string) => void;
   getCertificate: (id: string) => Certificate | undefined;
   getFilteredCertificates: () => Certificate[];
   getSortedCertificates: (certs: Certificate[]) => Certificate[];
@@ -134,6 +137,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       console.error('删除证件失败:', err);
     }
+  },
+
+  completeRenewal: (id, completionDate) => {
+    const cert = get().certificates.find((c) => c.id === id);
+    if (!cert || cert.isPermanent) return;
+    const validityYears = getValidityYears(cert.type);
+    const year = parseInt(completionDate.substring(0, 4));
+    const month = completionDate.substring(5, 7);
+    const day = completionDate.substring(8, 10);
+    const newExpiryDate = `${year + validityYears}-${month}-${day}`;
+    const certificates = get().certificates.map((c) =>
+      c.id === id
+        ? {
+            ...c,
+            expiryDate: newExpiryDate,
+            issueDate: completionDate,
+            renewalCompletedDate: completionDate,
+            updatedAt: todayISO(),
+          }
+        : c
+    );
+    setCertificates(certificates);
+    const reminders = computeReminders(certificates);
+    setReminders(reminders);
+    set({ certificates, reminders });
   },
 
   getCertificate: (id) => get().certificates.find((c) => c.id === id),
