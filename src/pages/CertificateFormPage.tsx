@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { PhotoUploader } from '@/components/PhotoUploader';
@@ -35,6 +35,7 @@ interface FormState {
 
 export function CertificateFormPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isEdit = !!id;
 
@@ -50,10 +51,16 @@ export function CertificateFormPage() {
     ? certificates.find((c) => c.id === id)
     : undefined;
 
+  const urlHolderId = searchParams.get('holderId');
+  const urlHolder = urlHolderId ? members.find((m) => m.id === urlHolderId) : undefined;
+
+  const defaultHolderId = editingCert?.holderId || urlHolder?.id || (members[0]?.id || '');
+  const defaultHolderName = editingCert?.holderName || urlHolder?.name || (members[0]?.name || '');
+
   const [form, setForm] = useState<FormState>({
     type: editingCert?.type || '身份证',
-    holderId: editingCert?.holderId || (members[0]?.id || ''),
-    holderName: editingCert?.holderName || (members[0]?.name || ''),
+    holderId: defaultHolderId,
+    holderName: defaultHolderName,
     number: editingCert?.number || '',
     issuer: editingCert?.issuer || '',
     issueDate: editingCert?.issueDate || '',

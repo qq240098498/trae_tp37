@@ -20,12 +20,14 @@ export function generateMockMembers(): Member[] {
       id: generateId(),
       name: '张小明',
       relation: '子女',
+      notes: '孩子护照有效期5年，身份证5年一换；出行需携带户口本原件',
       createdAt: now,
     },
     {
       id: generateId(),
       name: '张建国',
       relation: '父亲',
+      notes: '老人记忆力欠佳，证件统一保管；居住证每年11月需签注',
       createdAt: now,
     },
   ];

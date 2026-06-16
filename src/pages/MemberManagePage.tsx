@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   Plus,
@@ -8,24 +9,39 @@ import {
   X,
   UserPlus,
   FileText,
+  Download,
+  Eye,
+  StickyNote,
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { Member, RELATION_TYPES, RelationType } from '@/types';
-import { generateMockMembers } from '@/utils/mockData';
 
 export function MemberManagePage() {
-  const { members, certificates, addMember, updateMember, deleteMember } =
-    useAppStore();
+  const navigate = useNavigate();
+  const {
+    members,
+    certificates,
+    addMember,
+    updateMember,
+    deleteMember,
+    setFilters,
+    exportMemberCertificates,
+  } = useAppStore();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<{ name: string; relation: RelationType }>({
+  const [form, setForm] = useState<{
+    name: string;
+    relation: RelationType;
+    notes: string;
+  }>({
     name: '',
     relation: '本人',
+    notes: '',
   });
 
   const resetForm = () => {
-    setForm({ name: '', relation: '本人' });
+    setForm({ name: '', relation: '本人', notes: '' });
     setEditingId(null);
     setShowForm(false);
   };
@@ -36,7 +52,7 @@ export function MemberManagePage() {
   };
 
   const openEdit = (m: Member) => {
-    setForm({ name: m.name, relation: m.relation });
+    setForm({ name: m.name, relation: m.relation, notes: m.notes || '' });
     setEditingId(m.id);
     setShowForm(true);
   };
@@ -45,9 +61,17 @@ export function MemberManagePage() {
     e.preventDefault();
     if (!form.name.trim()) return;
     if (editingId) {
-      updateMember(editingId, { name: form.name.trim(), relation: form.relation });
+      updateMember(editingId, {
+        name: form.name.trim(),
+        relation: form.relation,
+        notes: form.notes.trim() || undefined,
+      });
     } else {
-      addMember({ name: form.name.trim(), relation: form.relation });
+      addMember({
+        name: form.name.trim(),
+        relation: form.relation,
+        notes: form.notes.trim() || undefined,
+      });
     }
     resetForm();
   };
@@ -61,6 +85,25 @@ export function MemberManagePage() {
     if (confirm(`确定要删除成员「${m.name}」吗？`)) {
       deleteMember(m.id);
     }
+  };
+
+  const handleViewCerts = (m: Member) => {
+    setFilters({ holderId: m.id, type: undefined, search: undefined });
+    navigate('/certificates');
+  };
+
+  const handleExport = (m: Member) => {
+    const text = exportMemberCertificates(m.id);
+    if (!text) return;
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${m.name}-证件清单.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const memberCertCount = (memberId: string) =>
@@ -124,12 +167,12 @@ export function MemberManagePage() {
                 {editingId ? '编辑成员' : '添加新成员'}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                填写成员基本信息，用于关联证件
+                填写成员基本信息及家属档案备注
               </p>
             </div>
           </div>
-          <form onSubmit={handleSubmit} className="p-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   姓名 <span className="text-red-500">*</span>
@@ -149,30 +192,52 @@ export function MemberManagePage() {
                 </label>
                 <select
                   value={form.relation}
-                  onChange={(e) => setForm({ ...form, relation: e.target.value as RelationType })}
+                  onChange={(e) =>
+                    setForm({ ...form, relation: e.target.value as RelationType })
+                  }
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
                 >
                   {RELATION_TYPES.map((r) => (
-                    <option key={r} value={r}>{r}</option>
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
                   ))}
                 </select>
               </div>
-              <div className="flex items-end gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-cyan-500 text-white rounded-xl font-medium hover:bg-cyan-600 transition-colors shadow shadow-cyan-500/20"
-                >
-                  <Check className="w-4 h-4" />
-                  {editingId ? '保存修改' : '添加成员'}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-5 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                <span className="inline-flex items-center gap-1.5">
+                  <StickyNote className="w-4 h-4 text-amber-500" />
+                  家属档案备注
+                </span>
+              </label>
+              <textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="例如：孩子护照有效期5年；老人证件统一保管；每年11月需办理居住证签注等..."
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none"
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
+                记录该家庭成员的证件管理要点，方便统一管理老人/孩子的证件
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="submit"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-cyan-500 text-white rounded-xl font-medium hover:bg-cyan-600 transition-colors shadow shadow-cyan-500/20"
+              >
+                <Check className="w-4 h-4" />
+                {editingId ? '保存修改' : '添加成员'}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-5 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </form>
         </div>
@@ -204,12 +269,15 @@ export function MemberManagePage() {
             return (
               <div
                 key={member.id}
-                className="group rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                className="group rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 hover:shadow-xl hover:-translate-y-0.5 transition-all flex flex-col"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-4">
                     <div
-                      className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getAvatarColor(member.name, idx)} flex items-center justify-center text-white text-xl font-bold shadow-lg`}
+                      className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getAvatarColor(
+                        member.name,
+                        idx
+                      )} flex items-center justify-center text-white text-xl font-bold shadow-lg`}
                     >
                       {member.name.charAt(0)}
                     </div>
@@ -242,7 +310,18 @@ export function MemberManagePage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30">
+                {member.notes && (
+                  <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
+                    <div className="flex items-start gap-2">
+                      <StickyNote className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                      <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
+                        {member.notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center text-cyan-500 shadow-sm">
                     <FileText className="w-5 h-5" />
                   </div>
@@ -250,9 +329,28 @@ export function MemberManagePage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">关联证件</p>
                     <p className="text-xl font-bold text-gray-900 dark:text-white">
                       {certCount}
-                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">个</span>
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">
+                        个
+                      </span>
                     </p>
                   </div>
+                </div>
+
+                <div className="mt-auto grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleViewCerts(member)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 font-medium text-sm hover:bg-cyan-100 dark:hover:bg-cyan-500/20 transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                    查看证件
+                  </button>
+                  <button
+                    onClick={() => handleExport(member)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    导出清单
+                  </button>
                 </div>
               </div>
             );

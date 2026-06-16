@@ -18,6 +18,7 @@ export interface Member {
   name: string;
   relation: RelationType;
   avatar?: string;
+  notes?: string;
   createdAt: string;
 }
 

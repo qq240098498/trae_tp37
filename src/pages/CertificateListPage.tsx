@@ -5,8 +5,10 @@ import {
   Plus,
   Filter,
   X,
-  ArrowUpDown,
   ChevronDown,
+  User,
+  ArrowLeft,
+  Download,
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { CertificateCard } from '@/components/CertificateCard';
@@ -17,7 +19,6 @@ import {
   SortBy,
   SortOrder,
 } from '@/types';
-import { calculateDaysRemaining } from '@/utils/dateUtils';
 
 export function CertificateListPage() {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ export function CertificateListPage() {
     setSort,
     getFilteredCertificates,
     deleteCertificate,
+    exportMemberCertificates,
   } = useAppStore();
 
   const [showFilters, setShowFilters] = useState(false);
@@ -41,6 +43,24 @@ export function CertificateListPage() {
       deleteCertificate(id);
     }
   };
+
+  const handleExportCurrent = () => {
+    if (!filters.holderId) return;
+    const text = exportMemberCertificates(filters.holderId);
+    if (!text) return;
+    const member = members.find((m) => m.id === filters.holderId);
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${member?.name || '成员'}-证件清单.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredMember = members.find((m) => m.id === filters.holderId);
 
   const sortOptions: { label: string; value: SortBy; order: SortOrder }[] = [
     { label: '有效期 近→远', value: 'expiry', order: 'asc' },
@@ -55,18 +75,84 @@ export function CertificateListPage() {
 
   return (
     <div className="space-y-6">
+      {filteredMember && (
+        <div className="rounded-2xl border border-cyan-200 dark:border-cyan-500/30 bg-gradient-to-r from-cyan-50 to-white dark:from-cyan-500/10 dark:to-gray-800 p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setFilters({ holderId: undefined })}
+                className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 transition-all"
+                title="返回全部证件"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white text-lg font-bold shadow-lg">
+                  {filteredMember.name.charAt(0)}
+                </div>
+                <div>
+                  <h2 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                  <User className="w-4 h-4 text-cyan-500" />
+                    {filteredMember.name}
+                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                      ({filteredMember.relation})
+                    </span>
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    共 {certificates.length} 个证件
+                  </p>
+                </div>
+              </div>
+              {filteredMember.notes && (
+                <div className="hidden lg:block ml-6 pl-6 border-l border-gray-200 dark:border-gray-700">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="font-medium">档案备注：</span>
+                    {filteredMember.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate(`/certificates/new?holderId=${filteredMember.id}`)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-medium text-sm shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                为TA添加证件
+              </button>
+              <button
+                onClick={handleExportCurrent}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                导出清单
+              </button>
+            </div>
+          </div>
+          {filteredMember.notes && (
+            <div className="lg:hidden mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 pt-3">
+              <p className="text-sm text-gray-600 dark:text-gray-300 flex items-start gap-2">
+                <span className="font-medium text-amber-600 dark:text-amber-400">📝 档案备注：</span>
+                {filteredMember.notes}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1
             className="text-3xl font-bold text-gray-900 dark:text-white"
             style={{ fontFamily: 'Noto Serif SC, serif' }}
           >
-            证件管理
+            {filteredMember ? `${filteredMember.name} 的证件` : '证件管理'}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
             共 {certificates.length} 个证件，按
             <span className="font-medium text-cyan-600 dark:text-cyan-400">
-              {' '}有效期剩余天数{' '}
+              {' '}
+              有效期剩余天数{' '}
             </span>
             排序
           </p>

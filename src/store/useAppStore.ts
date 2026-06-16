@@ -8,6 +8,7 @@ import {
   CertificateFilters,
   SortBy,
   SortOrder,
+  CERTIFICATE_TYPE_EMOJI,
 } from '@/types';
 import {
   getCertificates,
@@ -48,10 +49,14 @@ interface AppState {
   getFilteredCertificates: () => Certificate[];
   getSortedCertificates: (certs: Certificate[]) => Certificate[];
   getExpiringCertificates: (limit?: number) => Certificate[];
+  getCertificatesByMember: (memberId: string) => Certificate[];
 
   addMember: (member: Omit<Member, 'id' | 'createdAt'>) => void;
   updateMember: (id: string, member: Partial<Member>) => void;
   deleteMember: (id: string) => void;
+  getMember: (id: string) => Member | undefined;
+
+  exportMemberCertificates: (memberId: string) => string;
 
   getRemindersWithCertificate: () => ReminderWithCertificate[];
   getActiveRemindersCount: () => number;
@@ -165,6 +170,55 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   getCertificate: (id) => get().certificates.find((c) => c.id === id),
+
+  getCertificatesByMember: (memberId) =>
+    get().certificates.filter((c) => c.holderId === memberId),
+
+  getMember: (id) => get().members.find((m) => m.id === id),
+
+  exportMemberCertificates: (memberId) => {
+    const member = get().getMember(memberId);
+    if (!member) return '';
+    const certs = get().getCertificatesByMember(memberId);
+    const now = new Date().toLocaleString('zh-CN');
+
+    let text = `═══════════════════════════════════════\n`;
+    text += `        ${member.name} 的证件清单\n`;
+    text += `═══════════════════════════════════════\n\n`;
+    text += `与户主关系：${member.relation}\n`;
+    if (member.notes) {
+      text += `家属档案备注：${member.notes}\n`;
+    }
+    text += `导出时间：${now}\n`;
+    text += `证件总数：${certs.length} 个\n\n`;
+    text += `───────────────────────────────────────\n\n`;
+
+    if (certs.length === 0) {
+      text += `（暂无证件记录）\n`;
+    } else {
+      certs.forEach((cert, idx) => {
+        const emoji = CERTIFICATE_TYPE_EMOJI[cert.type] || '📄';
+        text += `【${idx + 1}】${emoji} ${cert.type}\n`;
+        text += `    证件号码：${cert.number || '—'}\n`;
+        text += `    发证机关：${cert.issuer || '—'}\n`;
+        text += `    签发日期：${cert.issueDate || '—'}\n`;
+        text += `    有效期至：${cert.isPermanent ? '长期有效' : cert.expiryDate || '—'}\n`;
+        if (cert.location) {
+          text += `    所在地：${cert.location}\n`;
+        }
+        if (cert.notes) {
+          text += `    备注：${cert.notes}\n`;
+        }
+        text += `\n`;
+      });
+    }
+
+    text += `───────────────────────────────────────\n`;
+    text += `  本清单由「证件管家」自动生成\n`;
+    text += `═══════════════════════════════════════\n`;
+
+    return text;
+  },
 
   getFilteredCertificates: () => {
     const { certificates, filters } = get();
